@@ -36,3 +36,7 @@ node_modules/
 # Data (keep structure, ignore sensitive submissions)
 # Uncomment below to ignore user-submitted reviews:
 # data/reviews.json
+
+# Firebase service account key — NEVER commit this
+*-firebase-adminsdk-*.json
+firebase-service-account.json

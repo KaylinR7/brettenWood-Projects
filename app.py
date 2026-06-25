@@ -1,51 +1,73 @@
 import os
-import json
 import glob
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 app = Flask(__name__)
 app.secret_key = 'brettenwood-secret-key-2024'
 
 # ---------------------------------------------------------------------------
-# Data directory helpers
+# Firebase / Firestore initialisation
 # ---------------------------------------------------------------------------
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
-REVIEWS_FILE = os.path.join(DATA_DIR, 'reviews.json')
-PORTFOLIO_DESC_FILE = os.path.join(DATA_DIR, 'portfolio_descriptions.json')
+_SERVICE_ACCOUNT_KEY = (
+    os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
+    or r'C:\Users\Kaylin_r7\Downloads\bretten-wood-firebase-adminsdk-fbsvc-7f400e45c0.json'
+)
+
+cred = credentials.Certificate(_SERVICE_ACCOUNT_KEY)
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+REVIEWS_COLLECTION = 'reviews'
+PORTFOLIO_COLLECTION = 'portfolio_descriptions'
+
 PORTFOLIO_IMG_DIR = os.path.join(os.path.dirname(__file__), 'static', 'images', 'portfolio')
 
 
-def ensure_data_dir():
-    os.makedirs(DATA_DIR, exist_ok=True)
-
+# ---------------------------------------------------------------------------
+# Firestore helpers — Reviews
+# ---------------------------------------------------------------------------
 
 def load_reviews():
-    ensure_data_dir()
-    if not os.path.exists(REVIEWS_FILE):
+    """Fetch all reviews from Firestore, ordered newest first."""
+    try:
+        docs = db.collection(REVIEWS_COLLECTION).order_by(
+            'timestamp', direction=firestore.Query.DESCENDING
+        ).stream()
+        return [doc.to_dict() | {'id': doc.id} for doc in docs]
+    except Exception as e:
+        app.logger.error(f'Firestore load_reviews error: {e}')
         return []
-    with open(REVIEWS_FILE, 'r', encoding='utf-8') as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return []
 
 
-def save_reviews(reviews):
-    ensure_data_dir()
-    with open(REVIEWS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(reviews, f, indent=2, ensure_ascii=False)
+def save_review(review: dict):
+    """Persist a single review document to Firestore."""
+    db.collection(REVIEWS_COLLECTION).add(review)
 
+
+# ---------------------------------------------------------------------------
+# Firestore helpers — Portfolio descriptions
+# ---------------------------------------------------------------------------
 
 def load_portfolio_descriptions():
-    if not os.path.exists(PORTFOLIO_DESC_FILE):
+    """
+    Returns a dict keyed by filename, e.g.:
+      { 'sample_installation.jpg': { title, description, category } }
+    """
+    try:
+        docs = db.collection(PORTFOLIO_COLLECTION).stream()
+        return {doc.id: doc.to_dict() for doc in docs}
+    except Exception as e:
+        app.logger.error(f'Firestore load_portfolio_descriptions error: {e}')
         return {}
-    with open(PORTFOLIO_DESC_FILE, 'r', encoding='utf-8') as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return {}
 
+
+# ---------------------------------------------------------------------------
+# Portfolio image scanner
+# ---------------------------------------------------------------------------
 
 def scan_portfolio_images():
     """Scan portfolio directory for images and return structured data."""
@@ -68,7 +90,6 @@ def scan_portfolio_images():
             continue
         seen.add(filename)
 
-        # Generate a human-readable title from filename
         stem = os.path.splitext(filename)[0]
         title = stem.replace('_', ' ').replace('-', ' ').title()
 
@@ -85,7 +106,7 @@ def scan_portfolio_images():
 
 
 # ---------------------------------------------------------------------------
-# Tank Systems Data
+# Tank Systems Data (static — no DB needed)
 # ---------------------------------------------------------------------------
 TANK_SYSTEMS = {
     'jojo_1000': {
@@ -244,8 +265,6 @@ def portfolio():
 @app.route('/reviews')
 def reviews():
     all_reviews = load_reviews()
-    # Sort newest first
-    all_reviews.sort(key=lambda r: r.get('timestamp', ''), reverse=True)
     return render_template('reviews.html', reviews=all_reviews)
 
 
@@ -284,11 +303,13 @@ def submit_review():
         'timestamp': datetime.now().isoformat(),
     }
 
-    reviews = load_reviews()
-    reviews.append(review)
-    save_reviews(reviews)
+    try:
+        save_review(review)
+        flash('Thank you for your review! It has been submitted successfully.', 'success')
+    except Exception as e:
+        app.logger.error(f'Failed to save review: {e}')
+        flash('Sorry, there was a problem submitting your review. Please try again.', 'danger')
 
-    flash('Thank you for your review! It has been submitted successfully.', 'success')
     return redirect(url_for('reviews'))
 
 
@@ -314,17 +335,27 @@ def submit_contact():
             flash(err, 'danger')
         return redirect(url_for('contact'))
 
-    # In production: send email via SMTP / save to DB
-    # For now just flash success
+    enquiry = {
+        'name': name,
+        'email': email,
+        'phone': phone,
+        'area': area,
+        'urgency': urgency,
+        'message': message,
+        'timestamp': datetime.now().isoformat(),
+    }
+
+    try:
+        db.collection('contact_enquiries').add(enquiry)
+    except Exception as e:
+        app.logger.error(f'Failed to save contact enquiry: {e}')
+
     flash(f'Thank you {name}! We will be in touch shortly.', 'success')
     return redirect(url_for('contact'))
 
 
 # ---------------------------------------------------------------------------
 if __name__ == '__main__':
-    # Ensure required directories exist
-    for d in [DATA_DIR, PORTFOLIO_IMG_DIR,
-              os.path.join(os.path.dirname(__file__), 'static', 'images', 'tanks')]:
-        os.makedirs(d, exist_ok=True)
-
+    os.makedirs(PORTFOLIO_IMG_DIR, exist_ok=True)
+    os.makedirs(os.path.join(os.path.dirname(__file__), 'static', 'images', 'tanks'), exist_ok=True)
     app.run(debug=True, host='0.0.0.0', port=5000)
