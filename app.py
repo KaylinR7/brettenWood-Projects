@@ -20,7 +20,7 @@ _SERVICE_ACCOUNT_KEY = (
 
 cred = credentials.Certificate(_SERVICE_ACCOUNT_KEY)
 firebase_admin.initialize_app(cred, {
-    'storageBucket': 'bretten-wood.appspot.com'
+    'storageBucket': 'bretten-wood.firebasestorage.app'
 })
 db = firestore.client()
 
