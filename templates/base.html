@@ -28,10 +28,9 @@
   <div class="container-xl">
     <!-- Brand / Logo -->
     <a class="navbar-brand bw-brand d-flex align-items-center gap-2" href="{{ url_for('home') }}">
-      <div class="bw-logo-box">
-        <i class="fa-solid fa-droplet"></i>
-      </div>
-      <span class="bw-brand-text">BRETTENWOOD<br><small>PROJECTS</small></span>
+      <img src="{{ url_for('static', filename='images/logo.jpg') }}"
+           alt="BrettenWood Projects Logo"
+           class="bw-logo-img">
     </a>
 
     <!-- Mobile toggle -->
@@ -100,10 +99,9 @@
       <!-- Brand column -->
       <div class="col-lg-4" data-aos="fade-up">
         <div class="d-flex align-items-center gap-2 mb-3">
-          <div class="bw-logo-box bw-logo-box--light">
-            <i class="fa-solid fa-droplet"></i>
-          </div>
-          <span class="bw-footer-brand">BRETTENWOOD<br><small>PROJECTS</small></span>
+          <img src="{{ url_for('static', filename='images/logo.jpg') }}"
+               alt="BrettenWood Projects Logo"
+               class="bw-logo-img bw-logo-img--footer">
         </div>
         <p class="bw-footer-text">
           KwaZulu-Natal's trusted specialists in water backup, tank installation and
