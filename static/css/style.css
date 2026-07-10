@@ -161,13 +161,6 @@ img {
   box-shadow: var(--bw-shadow-lg);
 }
 
-/* Logo image (replaces old icon box) */
-.bw-logo-img {
-  height: 50px;
-  width: 50px;
-  object-fit: cover;
-  border-radius: 8px;
-
   /* Logo image (replaces old icon box) */
   .bw-logo-img {
     height: 50px;
@@ -452,6 +445,70 @@ img {
     color: rgba(255, 255, 255, 0.7);
     font-size: 1.05rem;
     line-height: 1.7;
+  }
+
+  /* ===================================================
+   PAGE HEADERS
+   =================================================== */
+  .bw-page-header {
+    background: var(--bw-black);
+    color: var(--bw-white);
+    padding: 140px 0 60px; /* Accounts for fixed navbar */
+  }
+
+  .bw-page-title {
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin-bottom: 1rem;
+  }
+
+  .bw-page-subtitle {
+    font-size: 1.25rem;
+    color: rgba(255, 255, 255, 0.7);
+    max-width: 700px;
+  }
+
+  /* ===================================================
+   FORMS & CARDS
+   =================================================== */
+  .bw-form-card {
+    background: var(--bw-white);
+    border: 2px solid var(--bw-black);
+    border-radius: var(--bw-radius-lg);
+    padding: 2.5rem;
+    box-shadow: 8px 8px 0 var(--bw-black);
+  }
+
+  .bw-form-label {
+    font-family: var(--bw-font-head);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--bw-gray-900);
+    margin-bottom: 0.5rem;
+  }
+
+  .bw-form-input,
+  .bw-form-select,
+  .bw-form-textarea {
+    border: 2px solid var(--bw-gray-400);
+    border-radius: var(--bw-radius);
+    padding: 0.75rem 1rem;
+    font-family: var(--bw-font-body);
+    font-size: 1rem;
+    transition: border-color var(--bw-transition), box-shadow var(--bw-transition);
+  }
+
+  .bw-form-input:focus,
+  .bw-form-select:focus,
+  .bw-form-textarea:focus {
+    border-color: var(--bw-black);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+    outline: none;
   }
 
   /* ===================================================
