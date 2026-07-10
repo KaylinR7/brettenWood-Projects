@@ -1568,6 +1568,26 @@ img {
   }
 
   /* ===================================================
+   LIGHTBOX MODAL
+   =================================================== */
+  .bw-lightbox-content {
+    background: var(--bw-white);
+    border: none;
+    border-radius: var(--bw-radius-lg);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .bw-lightbox-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    max-height: 80vh;
+  }
+
+
+
+  /* ===================================================
    RESPONSIVE
    =================================================== */
   @media (max-width: 991.98px) {

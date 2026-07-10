@@ -52,12 +52,12 @@
         <div class="bw-portfolio-card"
              data-bs-toggle="modal"
              data-bs-target="#lightboxModal"
-             data-img="{{ img.url }}"
+             data-img="{{ url_for('static', filename=img.url) }}"
              data-title="{{ img.title }}"
              data-desc="{{ img.description }}"
              data-cat="{{ img.category }}">
           <div class="bw-portfolio-img-wrap">
-            <img src="{{ img.url }}"
+            <img src="{{ url_for('static', filename=img.url) }}"
                  alt="{{ img.title }}"
                  class="bw-portfolio-img"
                  loading="lazy">
@@ -113,13 +113,29 @@
   </div>
 </section>
 
+
+<!-- CTA -->
+<section class="bw-cta-section">
+  <div class="container-xl text-center">
+    <h2 class="bw-cta-title" data-aos="fade-up">Want a similar installation?</h2>
+    <p class="bw-cta-text" data-aos="fade-up" data-aos-delay="100">
+      Get in touch and we'll assess your property and recommend the right system.
+    </p>
+    <a href="{{ url_for('contact') }}" class="btn bw-btn-primary btn-lg mt-3"
+       data-aos="fade-up" data-aos-delay="200">
+      <i class="fa-solid fa-calendar-check me-2"></i>Book a Free Assessment
+    </a>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block modals %}
 <!-- Lightbox Modal -->
 <div class="modal fade bw-lightbox-modal" id="lightboxModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="modal-content bw-lightbox-content">
-      <button type="button" class="bw-lightbox-close" data-bs-dismiss="modal" aria-label="Close">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
+      <button type="button" class="btn-close position-absolute top-0 end-0 m-4 z-3 shadow" data-bs-dismiss="modal" aria-label="Close" style="background-color: var(--bw-white); opacity: 1; padding: 0.8rem; border-radius: 50%;"></button>
       <div class="row g-0">
         <div class="col-lg-8">
           <img id="lightboxImg" src="" alt="" class="bw-lightbox-img">
@@ -136,21 +152,6 @@
     </div>
   </div>
 </div>
-
-<!-- CTA -->
-<section class="bw-cta-section">
-  <div class="container-xl text-center">
-    <h2 class="bw-cta-title" data-aos="fade-up">Want a similar installation?</h2>
-    <p class="bw-cta-text" data-aos="fade-up" data-aos-delay="100">
-      Get in touch and we'll assess your property and recommend the right system.
-    </p>
-    <a href="{{ url_for('contact') }}" class="btn bw-btn-primary btn-lg mt-3"
-       data-aos="fade-up" data-aos-delay="200">
-      <i class="fa-solid fa-calendar-check me-2"></i>Book a Free Assessment
-    </a>
-  </div>
-</section>
-
 {% endblock %}
 
 {% block extra_scripts %}
