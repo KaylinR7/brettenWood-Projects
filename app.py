@@ -1,5 +1,4 @@
 import os
-import json
 import glob
 import sqlite3
 from datetime import datetime
@@ -202,7 +201,7 @@ def scan_portfolio_images():
 
 
 # ---------------------------------------------------------------------------
-# Tank Systems Data
+# Tank Systems Data (static — no DB needed)
 # ---------------------------------------------------------------------------
 TANK_SYSTEMS = {
     'jojo_1000': {
@@ -351,11 +350,138 @@ def systems():
 
 @app.route('/portfolio')
 def portfolio():
-    images = scan_portfolio_images()
+    # Load dynamically from Firestore
+    images = load_portfolio_from_firestore()
     category_filter = request.args.get('category', 'all')
+    
+    if category_filter != 'all':
+        images = [img for img in images if img.get('category') == category_filter]
+        
     return render_template('portfolio.html',
                            images=images,
                            category_filter=category_filter)
+
+
+# ---------------------------------------------------------------------------
+# Hidden Admin Portal Routes
+# ---------------------------------------------------------------------------
+
+ADMIN_PASSWORD = os.environ.get('BW_ADMIN_PASSWORD', 'bwProjects2026')
+
+@app.route('/bw-admin-portal', methods=['GET', 'POST'])
+def admin_portal():
+    # Simple session check or password submission
+    from flask import session
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'login':
+            password = request.form.get('password')
+            if password == ADMIN_PASSWORD:
+                session['is_admin'] = True
+                flash('Successfully logged into Admin Dashboard.', 'success')
+            else:
+                flash('Incorrect password.', 'danger')
+            return redirect(url_for('admin_portal'))
+            
+        elif action == 'logout':
+            session.pop('is_admin', None)
+            flash('Logged out.', 'success')
+            return redirect(url_for('admin_portal'))
+            
+    is_authenticated = session.get('is_admin', False)
+    
+    # If logged in, show existing portfolio items to allow deletion/management
+    portfolio_items = []
+    if is_authenticated:
+        portfolio_items = load_portfolio_from_firestore()
+        
+    return render_template('admin.html', is_authenticated=is_authenticated, portfolio=portfolio_items)
+
+
+@app.route('/submit_project', methods=['POST'])
+def submit_project():
+    from flask import session
+    if not session.get('is_admin', False):
+        flash('Unauthorized.', 'danger')
+        return redirect(url_for('admin_portal'))
+        
+    title = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
+    category = request.form.get('category', 'residential').strip()
+    file = request.files.get('file')
+    
+    if not title or not file:
+        flash('Project title and image file are required.', 'danger')
+        return redirect(url_for('admin_portal'))
+        
+    try:
+        # 1. Upload to Firebase Storage
+        bucket = storage.bucket()
+        # Clean up filename
+        ext = os.path.splitext(file.filename)[1]
+        secure_filename = f"portfolio_{datetime.now().strftime('%Y%m%d%H%M%S')}{ext}"
+        
+        blob = bucket.blob(f"portfolio/{secure_filename}")
+        # Upload
+        blob.upload_from_string(
+            file.read(),
+            content_type=file.content_type
+        )
+        
+        # Make public so it can be viewed by anyone
+        blob.make_public()
+        image_url = blob.public_url
+        
+        # 2. Save metadata to Firestore
+        save_portfolio_project(title, description, category, image_url)
+        
+        flash('New portfolio project successfully uploaded and published!', 'success')
+    except Exception as e:
+        app.logger.error(f'Failed to upload project: {e}')
+        flash(f'Error uploading project: {e}', 'danger')
+        
+    return redirect(url_for('admin_portal'))
+
+
+@app.route('/delete_project/<project_id>', methods=['POST'])
+def delete_project(project_id):
+    from flask import session
+    if not session.get('is_admin', False):
+        flash('Unauthorized.', 'danger')
+        return redirect(url_for('admin_portal'))
+        
+    try:
+        # Delete from Firestore
+        doc_ref = db.collection(PORTFOLIO_DB_COLLECTION).document(project_id)
+        doc = doc_ref.get()
+        if doc.exists:
+            # Delete from Firebase Storage if path matches
+            data = doc.to_dict()
+            url = data.get('url', '')
+            if 'firebasestorage.googleapis.com' in url or 'storage.googleapis.com' in url:
+                try:
+                    bucket = storage.bucket()
+                    # extract blob path from public url
+                    filename = url.split('/')[-1].split('?')[0]
+                    if '%2F' in filename:
+                        filename = filename.replace('%2F', '/')
+                    blob = bucket.blob(filename)
+                    if blob.exists():
+                        blob.delete()
+                except Exception as ex:
+                    app.logger.error(f'Failed to delete blob: {ex}')
+            
+            doc_ref.delete()
+            flash('Project deleted.', 'success')
+        else:
+            flash('Project not found.', 'danger')
+    except Exception as e:
+        app.logger.error(f'Failed to delete project: {e}')
+        flash('Error deleting project.', 'danger')
+        
+    return redirect(url_for('admin_portal'))
+
 
 
 @app.route('/reviews')
@@ -418,8 +544,21 @@ def submit_contact():
             flash(err, 'danger')
         return redirect(url_for('contact'))
 
-    # In production: send email via SMTP / save to DB
-    # For now just flash success
+    enquiry = {
+        'name': name,
+        'email': email,
+        'phone': phone,
+        'area': area,
+        'urgency': urgency,
+        'message': message,
+        'timestamp': datetime.now().isoformat(),
+    }
+
+    try:
+        db.collection('contact_enquiries').add(enquiry)
+    except Exception as e:
+        app.logger.error(f'Failed to save contact enquiry: {e}')
+
     flash(f'Thank you {name}! We will be in touch shortly.', 'success')
     return redirect(url_for('contact'))
 

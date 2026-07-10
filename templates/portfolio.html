@@ -52,12 +52,12 @@
         <div class="bw-portfolio-card"
              data-bs-toggle="modal"
              data-bs-target="#lightboxModal"
-             data-img="{{ url_for('static', filename=img.url) }}"
+             data-img="{{ img.url }}"
              data-title="{{ img.title }}"
              data-desc="{{ img.description }}"
              data-cat="{{ img.category }}">
           <div class="bw-portfolio-img-wrap">
-            <img src="{{ url_for('static', filename=img.url) }}"
+            <img src="{{ img.url }}"
                  alt="{{ img.title }}"
                  class="bw-portfolio-img"
                  loading="lazy">
@@ -78,14 +78,13 @@
       {% endfor %}
     </div>
     {% else %}
-    <!-- No images yet: show placeholder grid -->
+    <!-- No images yet -->
     <div class="text-center mb-4" data-aos="fade-up">
       <div class="bw-portfolio-placeholder-msg">
         <i class="fa-solid fa-images fa-4x mb-4"></i>
-        <h3>Portfolio images coming soon</h3>
+        <h3>Portfolio is empty</h3>
         <p class="mb-4">
-          Add your project photos to
-          <code>static/images/portfolio/</code> and they will appear here automatically.
+          Add new project photos through the secure Admin Portal dashboard.
         </p>
         <a href="{{ url_for('contact') }}" class="btn bw-btn-primary">
           <i class="fa-solid fa-phone me-2"></i>Enquire About a Project

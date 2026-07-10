@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard | BrettenWood Projects{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<section class="bw-page-header">
+  <div class="container-xl">
+    <div class="row">
+      <div class="col" data-aos="fade-right">
+        <span class="bw-section-eyebrow bw-section-eyebrow--light">Hidden Portal</span>
+        <h1 class="bw-page-title">Admin Dashboard</h1>
+        <p class="bw-page-subtitle">
+          Manage your live portfolio projects directly from your phone.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="bw-section">
+  <div class="container-xl">
+    <div class="row justify-content-center">
+
+      {% if not is_authenticated %}
+      <!-- Password Protected Login Card -->
+      <div class="col-md-6 col-lg-5" data-aos="fade-up">
+        <div class="bw-form-card text-center">
+          <i class="fa-solid fa-lock fa-3x mb-3 text-dark"></i>
+          <h2 class="fw-bold mb-3">Access Portal</h2>
+          <p class="text-muted mb-4">Enter your administrative password to log in.</p>
+          
+          <form method="POST" action="{{ url_for('admin_portal') }}">
+            <input type="hidden" name="action" value="login">
+            <div class="mb-4 text-start">
+              <label for="admin-password" class="bw-form-label">Password</label>
+              <input type="password" id="admin-password" name="password" 
+                     class="form-control bw-form-input text-center" 
+                     placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn bw-btn-primary w-100 btn-lg">
+              <i class="fa-solid fa-right-to-bracket me-2"></i>Log In
+            </button>
+          </form>
+        </div>
+      </div>
+      
+      {% else %}
+      
+      <!-- Authenticated View: Upload & List -->
+      <!-- Upload Column -->
+      <div class="col-lg-5 mb-5" data-aos="fade-right">
+        <div class="bw-form-card">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold mb-0">Publish Project</h2>
+            <form method="POST" action="{{ url_for('admin_portal') }}" class="m-0">
+              <input type="hidden" name="action" value="logout">
+              <button type="submit" class="btn btn-sm btn-outline-danger uppercase tracking-wide px-2 py-1 small">
+                Logout <i class="fa-solid fa-right-from-bracket ms-1"></i>
+              </button>
+            </form>
+          </div>
+          
+          <form method="POST" action="{{ url_for('submit_project') }}" enctype="multipart/form-data" id="uploadForm">
+            <!-- Project Title -->
+            <div class="mb-3">
+              <label for="proj-title" class="bw-form-label">Project Title <span class="text-danger">*</span></label>
+              <input type="text" id="proj-title" name="title" class="form-control bw-form-input" 
+                     placeholder="e.g. Ballito 5000L Installation" required>
+            </div>
+
+            <!-- Description -->
+            <div class="mb-3">
+              <label for="proj-desc" class="bw-form-label">Description <span class="text-muted">(optional)</span></label>
+              <textarea id="proj-desc" name="description" class="form-control bw-form-textarea" 
+                        rows="3" placeholder="Specs, pump size, or suburb details..."></textarea>
+            </div>
+
+            <!-- Category -->
+            <div class="mb-3">
+              <label for="proj-cat" class="bw-form-label">Category</label>
+              <select id="proj-cat" name="category" class="form-select bw-form-select">
+                <option value="residential">Residential</option>
+                <option value="commercial">Commercial</option>
+              </select>
+            </div>
+
+            <!-- Image File Selection -->
+            <div class="mb-4">
+              <label for="proj-file" class="bw-form-label">Image File <span class="text-danger">*</span></label>
+              <input type="file" id="proj-file" name="file" class="form-control bw-form-input" 
+                     accept="image/*" required>
+              <small class="text-muted d-block mt-1">Supports PNG, JPG, JPEG, and WebP.</small>
+            </div>
+
+            <button type="submit" class="btn bw-btn-primary btn-lg w-100" id="uploadBtn">
+              <i class="fa-solid fa-cloud-arrow-up me-2"></i>Upload to Portfolio
+            </button>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Existing List Column -->
+      <div class="col-lg-7" data-aos="fade-left">
+        <div class="bw-form-card">
+          <h2 class="fw-bold mb-4">Current Projects ({{ portfolio|length }})</h2>
+          
+          {% if portfolio %}
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead>
+                <tr>
+                  <th scope="col" style="width: 80px;">Image</th>
+                  <th scope="col">Project</th>
+                  <th scope="col">Category</th>
+                  <th scope="col" class="text-end">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in portfolio %}
+                <tr>
+                  <td>
+                    <img src="{{ item.url }}" alt="{{ item.title }}" 
+                         style="width: 60px; height: 45px; object-fit: cover; border-radius: 4px;">
+                  </td>
+                  <td>
+                    <strong class="d-block small">{{ item.title }}</strong>
+                    <span class="text-muted small d-block text-truncate" style="max-width: 240px;">
+                      {{ item.description or 'No description' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge bg-dark text-uppercase small" style="font-size: 0.65rem;">
+                      {{ item.category }}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <form method="POST" action="{{ url_for('delete_project', project_id=item.id) }}"
+                          onsubmit="return confirm('Are you sure you want to delete this project permanently?');">
+                      <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="fa-regular fa-trash-can"></i>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="fa-solid fa-images fa-2x mb-2 d-block"></i>
+            <p class="mb-0">No projects uploaded yet.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      {% endif %}
+
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{% if is_authenticated %}
+<script>
+// Loading spinner on submission
+document.getElementById('uploadForm').addEventListener('submit', function () {
+  const btn = document.getElementById('uploadBtn');
+  if (btn) {
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading and Publishing…';
+    btn.disabled = true;
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

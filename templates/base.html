@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="BrettenWood Projects – Professional water backup and tank installation services across KwaZulu-Natal, South Africa.">
+  <meta name="description"
+    content="BrettenWood Projects – Professional water backup and tank installation services across KwaZulu-Natal, South Africa.">
   <title>{% block title %}BrettenWood Projects | Water Backup Systems KZN{% endblock %}</title>
 
   <!-- Bootstrap 5 -->
@@ -15,164 +17,169 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet">
   <!-- Custom CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
   {% block extra_head %}{% endblock %}
 </head>
+
 <body>
 
-<!-- ======================== NAVBAR ======================== -->
-<header id="main-navbar" class="navbar navbar-expand-lg bw-navbar fixed-top">
-  <div class="container-xl">
-    <!-- Brand / Logo -->
-    <a class="navbar-brand bw-brand d-flex align-items-center gap-2" href="{{ url_for('home') }}">
-      <img src="{{ url_for('static', filename='images/logo.jpg') }}"
-           alt="BrettenWood Projects Logo"
-           class="bw-logo-img">
-    </a>
+  <!-- ======================== NAVBAR ======================== -->
+  <header id="main-navbar" class="navbar navbar-expand-lg bw-navbar fixed-top">
+    <div class="container-xl">
+      <!-- Brand / Logo -->
+      <a class="navbar-brand bw-brand d-flex align-items-center gap-2" href="{{ url_for('home') }}">
+        <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="BrettenWood Projects Logo"
+          class="bw-logo-img">
+      </a>
 
-    <!-- Mobile toggle -->
-    <button class="navbar-toggler bw-toggler" type="button"
-            data-bs-toggle="collapse" data-bs-target="#navbarMenu"
-            aria-controls="navbarMenu" aria-expanded="false" aria-label="Toggle navigation">
-      <span></span><span></span><span></span>
-    </button>
+      <!-- Mobile toggle -->
+      <button class="navbar-toggler bw-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMenu"
+        aria-controls="navbarMenu" aria-expanded="false" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
 
-    <!-- Nav links -->
-    <div class="collapse navbar-collapse" id="navbarMenu">
-      <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
-        <li class="nav-item">
-          <a class="nav-link bw-nav-link {% if request.endpoint == 'home' %}active{% endif %}"
-             href="{{ url_for('home') }}">Home</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link bw-nav-link {% if request.endpoint == 'systems' %}active{% endif %}"
-             href="{{ url_for('systems') }}">Tank Systems</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link bw-nav-link {% if request.endpoint == 'portfolio' %}active{% endif %}"
-             href="{{ url_for('portfolio') }}">Portfolio</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link bw-nav-link {% if request.endpoint == 'reviews' %}active{% endif %}"
-             href="{{ url_for('reviews') }}">Reviews</a>
-        </li>
-        <li class="nav-item ms-lg-3">
-          <a class="btn bw-btn-primary" href="{{ url_for('contact') }}">
-            <i class="fa-solid fa-phone-volume me-1"></i> Get a Quote
-          </a>
-        </li>
-      </ul>
+      <!-- Nav links -->
+      <div class="collapse navbar-collapse" id="navbarMenu">
+        <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
+          <li class="nav-item">
+            <a class="nav-link bw-nav-link {% if request.endpoint == 'home' %}active{% endif %}"
+              href="{{ url_for('home') }}">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link bw-nav-link {% if request.endpoint == 'systems' %}active{% endif %}"
+              href="{{ url_for('systems') }}">Tank Systems</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link bw-nav-link {% if request.endpoint == 'portfolio' %}active{% endif %}"
+              href="{{ url_for('portfolio') }}">Portfolio</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link bw-nav-link {% if request.endpoint == 'reviews' %}active{% endif %}"
+              href="{{ url_for('reviews') }}">Reviews</a>
+          </li>
+          <li class="nav-item ms-lg-3">
+            <a class="btn bw-btn-primary" href="{{ url_for('contact') }}">
+              <i class="fa-solid fa-phone-volume me-1"></i> Get a Quote
+            </a>
+          </li>
+        </ul>
+      </div>
     </div>
-  </div>
-</header>
-<!-- ======================== END NAVBAR ======================== -->
+  </header>
+  <!-- ======================== END NAVBAR ======================== -->
 
-<!-- Flash messages -->
-{% with messages = get_flashed_messages(with_categories=true) %}
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
-    <div class="bw-flash-wrapper">
-      {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show bw-flash" role="alert">
-          <i class="fa-solid {% if category == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %} me-2"></i>
-          {{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-      {% endfor %}
+  <div class="bw-flash-wrapper">
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show bw-flash" role="alert">
+      <i
+        class="fa-solid {% if category == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %} me-2"></i>
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-  {% endif %}
-{% endwith %}
-
-<!-- ======================== MAIN CONTENT ======================== -->
-<main>
-  {% block content %}{% endblock %}
-</main>
-<!-- ======================== END MAIN ======================== -->
-
-<!-- ======================== FOOTER ======================== -->
-<footer class="bw-footer">
-  <div class="container-xl">
-    <div class="row g-5 py-5">
-
-      <!-- Brand column -->
-      <div class="col-lg-4" data-aos="fade-up">
-        <div class="d-flex align-items-center gap-2 mb-3">
-          <img src="{{ url_for('static', filename='images/logo.jpg') }}"
-               alt="BrettenWood Projects Logo"
-               class="bw-logo-img bw-logo-img--footer">
-        </div>
-        <p class="bw-footer-text">
-          KwaZulu-Natal's trusted specialists in water backup, tank installation and
-          pump systems. Engineering reliability into every home.
-        </p>
-        <div class="d-flex gap-3 mt-3">
-          <a href="#" class="bw-social-link" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-          <a href="#" class="bw-social-link" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-          <a href="#" class="bw-social-link" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
-        </div>
-      </div>
-
-      <!-- Navigation -->
-      <div class="col-6 col-lg-2" data-aos="fade-up" data-aos-delay="100">
-        <h6 class="bw-footer-heading">Navigation</h6>
-        <ul class="list-unstyled bw-footer-links">
-          <li><a href="{{ url_for('home') }}">Home</a></li>
-          <li><a href="{{ url_for('systems') }}">Tank Systems</a></li>
-          <li><a href="{{ url_for('portfolio') }}">Portfolio</a></li>
-          <li><a href="{{ url_for('reviews') }}">Reviews</a></li>
-          <li><a href="{{ url_for('contact') }}">Contact</a></li>
-        </ul>
-      </div>
-
-      <!-- Services -->
-      <div class="col-6 col-lg-2" data-aos="fade-up" data-aos-delay="150">
-        <h6 class="bw-footer-heading">Services</h6>
-        <ul class="list-unstyled bw-footer-links">
-          <li><a href="#">Municipal Backup</a></li>
-          <li><a href="#">Tank Installation</a></li>
-          <li><a href="#">Pump Systems</a></li>
-          <li><a href="#">Rainwater Harvest</a></li>
-          <li><a href="#">Solar Pumping</a></li>
-        </ul>
-      </div>
-
-      <!-- Service Areas -->
-      <div class="col-lg-4" data-aos="fade-up" data-aos-delay="200">
-        <h6 class="bw-footer-heading">Service Areas</h6>
-        <div class="row g-2">
-          {% for area in ['Durban Metro', 'South Coast', 'North Coast', 'Ballito / Salt Rock', 'Umhlanga', 'Zimbali', 'Inland KZN'] %}
-          <div class="col-6">
-            <span class="bw-area-badge">
-              <i class="fa-solid fa-location-dot me-1"></i>{{ area }}
-            </span>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-
-    <hr class="bw-footer-divider">
-
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center py-3 gap-2">
-      <p class="bw-footer-copy mb-0">
-        &copy; 2024 BrettenWood Projects. All rights reserved. | KwaZulu-Natal, South Africa.
-      </p>
-      <p class="bw-footer-copy mb-0">
-        Built for reliability.
-      </p>
-    </div>
+    {% endfor %}
   </div>
-</footer>
-<!-- ======================== END FOOTER ======================== -->
+  {% endif %}
+  {% endwith %}
 
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<!-- AOS -->
-<script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
-<!-- Custom JS -->
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
-{% block extra_scripts %}{% endblock %}
+  <!-- ======================== MAIN CONTENT ======================== -->
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <!-- ======================== END MAIN ======================== -->
+
+  <!-- ======================== FOOTER ======================== -->
+  <footer class="bw-footer">
+    <div class="container-xl">
+      <div class="row g-5 py-5">
+
+        <!-- Brand column -->
+        <div class="col-lg-4" data-aos="fade-up">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="BrettenWood Projects Logo"
+              class="bw-logo-img bw-logo-img--footer">
+            <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="BrettenWood Projects Logo"
+              class="bw-logo-img bw-logo-img--footer">
+          </div>
+          <p class="bw-footer-text">
+            KwaZulu-Natal's trusted specialists in water backup, tank installation and
+            pump systems. Engineering reliability into every home.
+          </p>
+          <div class="d-flex gap-3 mt-3">
+            <a href="#" class="bw-social-link" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" class="bw-social-link" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="#" class="bw-social-link" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+          </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="col-6 col-lg-2" data-aos="fade-up" data-aos-delay="100">
+          <h6 class="bw-footer-heading">Navigation</h6>
+          <ul class="list-unstyled bw-footer-links">
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            <li><a href="{{ url_for('systems') }}">Tank Systems</a></li>
+            <li><a href="{{ url_for('portfolio') }}">Portfolio</a></li>
+            <li><a href="{{ url_for('reviews') }}">Reviews</a></li>
+            <li><a href="{{ url_for('contact') }}">Contact</a></li>
+          </ul>
+        </div>
+
+        <!-- Services -->
+        <div class="col-6 col-lg-2" data-aos="fade-up" data-aos-delay="150">
+          <h6 class="bw-footer-heading">Services</h6>
+          <ul class="list-unstyled bw-footer-links">
+            <li><a href="#">Municipal Backup</a></li>
+            <li><a href="#">Tank Installation</a></li>
+            <li><a href="#">Pump Systems</a></li>
+            <li><a href="#">Rainwater Harvest</a></li>
+            <li><a href="#">Solar Pumping</a></li>
+          </ul>
+        </div>
+
+        <!-- Service Areas -->
+        <div class="col-lg-4" data-aos="fade-up" data-aos-delay="200">
+          <h6 class="bw-footer-heading">Service Areas</h6>
+          <div class="row g-2">
+            {% for area in ['Durban Metro', 'South Coast', 'North Coast', 'Ballito / Salt Rock', 'Umhlanga', 'Zimbali',
+            'Inland KZN'] %}
+            <div class="col-6">
+              <span class="bw-area-badge">
+                <i class="fa-solid fa-location-dot me-1"></i>{{ area }}
+              </span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <hr class="bw-footer-divider">
+
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-center py-3 gap-2">
+        <p class="bw-footer-copy mb-0">
+          &copy; 2024 BrettenWood Projects. All rights reserved. | KwaZulu-Natal, South Africa.
+        </p>
+        <p class="bw-footer-copy mb-0">
+          Built for reliability.
+        </p>
+      </div>
+    </div>
+  </footer>
+  <!-- ======================== END FOOTER ======================== -->
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- AOS -->
+  <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+  <!-- Custom JS -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
 </body>
+
 </html>
