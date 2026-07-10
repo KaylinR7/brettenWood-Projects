@@ -27,7 +27,7 @@
       <div class="col-lg-7" data-aos="fade-right">
         <div class="bw-form-card">
           <h2 class="fw-bold mb-4">Send Us a Message</h2>
-          <form method="POST" action="{{ url_for('submit_contact') }}" id="contactForm" novalidate>
+          <form id="contactForm" novalidate>
 
             <div class="row g-3">
               <!-- Name -->
@@ -109,7 +109,7 @@
                 <i class="fa-solid fa-phone bw-contact-icon"></i>
                 <div>
                   <small class="text-muted d-block">Call / WhatsApp</small>
-                  <a href="tel:+27000000000" class="fw-semibold">+27 (0) 00 000 0000</a>
+                  <a href="tel:+27738520277" class="fw-semibold">+27 73 852 0277</a>
                 </div>
               </li>
               <li>
@@ -123,7 +123,7 @@
                 <i class="fa-brands fa-whatsapp bw-contact-icon"></i>
                 <div>
                   <small class="text-muted d-block">WhatsApp</small>
-                  <a href="https://wa.me/27000000000" class="fw-semibold" target="_blank">
+                  <a href="https://wa.me/27738520277" class="fw-semibold" target="_blank">
                     Chat on WhatsApp
                   </a>
                 </div>
@@ -202,5 +202,34 @@
     }
   }
 })();
+
+// WhatsApp Submit Handler
+document.getElementById('contactForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  if (!this.checkValidity()) {
+    e.stopPropagation();
+    this.classList.add('was-validated');
+    return;
+  }
+  
+  const name = document.getElementById('contact-name').value.trim();
+  const email = document.getElementById('contact-email').value.trim();
+  const phone = document.getElementById('contact-phone').value.trim();
+  
+  const areaSelect = document.getElementById('contact-area');
+  const area = areaSelect.options[areaSelect.selectedIndex].text;
+  
+  const urgencySelect = document.getElementById('contact-urgency');
+  const urgency = urgencySelect.options[urgencySelect.selectedIndex].text;
+  
+  const message = document.getElementById('contact-message').value.trim();
+  
+  const waText = `Hi BrettenWood Projects,\n\nI would like to make an enquiry.\n\n*Name:* ${name}\n*Email:* ${email}\n*Phone:* ${phone || 'Not provided'}\n*Area:* ${area}\n*Urgency:* ${urgency}\n\n*Message:*\n${message}`;
+  
+  const waUrl = `https://wa.me/27738520277?text=${encodeURIComponent(waText)}`;
+  
+  window.open(waUrl, '_blank');
+});
 </script>
 {% endblock %}
