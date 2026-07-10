@@ -120,7 +120,7 @@
                 {% for item in portfolio %}
                 <tr>
                   <td>
-                    <img src="{{ item.url }}" alt="{{ item.title }}" 
+                    <img src="{{ url_for('static', filename=item.url) }}" alt="{{ item.title }}" 
                          style="width: 60px; height: 45px; object-fit: cover; border-radius: 4px;">
                   </td>
                   <td>
@@ -135,7 +135,7 @@
                     </span>
                   </td>
                   <td class="text-end">
-                    <form method="POST" action="{{ url_for('delete_project', project_id=item.id) }}"
+                    <form method="POST" action="{{ url_for('delete_project', filename=item.filename) }}"
                           onsubmit="return confirm('Are you sure you want to delete this project permanently?');">
                       <button type="submit" class="btn btn-sm btn-outline-danger">
                         <i class="fa-regular fa-trash-can"></i>
