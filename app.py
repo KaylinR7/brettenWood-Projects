@@ -1,50 +1,167 @@
 import os
 import json
 import glob
+import sqlite3
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, g
 
 app = Flask(__name__)
 app.secret_key = 'brettenwood-secret-key-2024'
 
 # ---------------------------------------------------------------------------
-# Data directory helpers
+# Paths
 # ---------------------------------------------------------------------------
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
-REVIEWS_FILE = os.path.join(DATA_DIR, 'reviews.json')
-PORTFOLIO_DESC_FILE = os.path.join(DATA_DIR, 'portfolio_descriptions.json')
+DATABASE = os.path.join(DATA_DIR, 'brettenwood.db')
 PORTFOLIO_IMG_DIR = os.path.join(os.path.dirname(__file__), 'static', 'images', 'portfolio')
 
+# Legacy JSON paths (used only for one-time migration)
+_LEGACY_REVIEWS_FILE = os.path.join(DATA_DIR, 'reviews.json')
+_LEGACY_PORTFOLIO_FILE = os.path.join(DATA_DIR, 'portfolio_descriptions.json')
 
-def ensure_data_dir():
+
+# ---------------------------------------------------------------------------
+# Database helpers
+# ---------------------------------------------------------------------------
+def get_db():
+    """Get a database connection for the current request (cached on g)."""
+    if 'db' not in g:
+        g.db = sqlite3.connect(DATABASE)
+        g.db.row_factory = sqlite3.Row          # rows behave like dicts
+        g.db.execute('PRAGMA journal_mode=WAL')  # better concurrency
+    return g.db
+
+
+@app.teardown_appcontext
+def close_db(exc):
+    """Close database connection at end of request."""
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
+
+
+def init_db():
+    """Create tables if they don't exist and migrate legacy JSON data."""
     os.makedirs(DATA_DIR, exist_ok=True)
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS reviews (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            name      TEXT    NOT NULL,
+            email     TEXT,
+            rating    INTEGER NOT NULL,
+            title     TEXT,
+            review    TEXT    NOT NULL,
+            timestamp TEXT    NOT NULL
+        )
+    ''')
+
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS portfolio_descriptions (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            filename    TEXT UNIQUE NOT NULL,
+            title       TEXT,
+            description TEXT,
+            category    TEXT DEFAULT 'residential'
+        )
+    ''')
+
+    conn.commit()
+
+    # --- One-time migration from legacy JSON files -------------------------
+    _migrate_legacy_reviews(conn)
+    _migrate_legacy_portfolio(conn)
+
+    conn.close()
 
 
+def _migrate_legacy_reviews(conn):
+    """Import reviews.json into the reviews table (runs once)."""
+    if not os.path.exists(_LEGACY_REVIEWS_FILE):
+        return
+    # Only migrate if the table is empty
+    count = conn.execute('SELECT COUNT(*) FROM reviews').fetchone()[0]
+    if count > 0:
+        return
+    try:
+        with open(_LEGACY_REVIEWS_FILE, 'r', encoding='utf-8') as f:
+            legacy = json.load(f)
+        for r in legacy:
+            conn.execute(
+                'INSERT INTO reviews (name, email, rating, title, review, timestamp) '
+                'VALUES (?, ?, ?, ?, ?, ?)',
+                (r.get('name', ''), r.get('email', ''), r.get('rating', 5),
+                 r.get('title', ''), r.get('review', ''), r.get('timestamp', '')))
+        conn.commit()
+        print(f'[init] Migrated {len(legacy)} reviews from JSON -> SQLite')
+    except (json.JSONDecodeError, KeyError) as exc:
+        print(f'[init] Could not migrate reviews.json: {exc}')
+
+
+def _migrate_legacy_portfolio(conn):
+    """Import portfolio_descriptions.json into the DB (runs once)."""
+    if not os.path.exists(_LEGACY_PORTFOLIO_FILE):
+        return
+    count = conn.execute('SELECT COUNT(*) FROM portfolio_descriptions').fetchone()[0]
+    if count > 0:
+        return
+    try:
+        with open(_LEGACY_PORTFOLIO_FILE, 'r', encoding='utf-8') as f:
+            legacy = json.load(f)
+        for filename, data in legacy.items():
+            conn.execute(
+                'INSERT INTO portfolio_descriptions (filename, title, description, category) '
+                'VALUES (?, ?, ?, ?)',
+                (filename, data.get('title', ''), data.get('description', ''),
+                 data.get('category', 'residential')))
+        conn.commit()
+        print(f'[init] Migrated {len(legacy)} portfolio descriptions from JSON -> SQLite')
+    except (json.JSONDecodeError, KeyError) as exc:
+        print(f'[init] Could not migrate portfolio_descriptions.json: {exc}')
+
+
+# ---------------------------------------------------------------------------
+# Data access functions
+# ---------------------------------------------------------------------------
 def load_reviews():
-    ensure_data_dir()
-    if not os.path.exists(REVIEWS_FILE):
-        return []
-    with open(REVIEWS_FILE, 'r', encoding='utf-8') as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return []
+    """Return all reviews as a list of dicts, newest first."""
+    db = get_db()
+    rows = db.execute(
+        'SELECT * FROM reviews ORDER BY timestamp DESC'
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
-def save_reviews(reviews):
-    ensure_data_dir()
-    with open(REVIEWS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(reviews, f, indent=2, ensure_ascii=False)
+def save_review(name, email, rating, title, review_text):
+    """Insert a single review and return its id."""
+    db = get_db()
+    cur = db.execute(
+        'INSERT INTO reviews (name, email, rating, title, review, timestamp) '
+        'VALUES (?, ?, ?, ?, ?, ?)',
+        (name, email, rating, title, review_text, datetime.now().isoformat()))
+    db.commit()
+    return cur.lastrowid
 
 
 def load_portfolio_descriptions():
-    if not os.path.exists(PORTFOLIO_DESC_FILE):
-        return {}
-    with open(PORTFOLIO_DESC_FILE, 'r', encoding='utf-8') as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return {}
+    """Return portfolio descriptions as {filename: {title, description, category}}."""
+    db = get_db()
+    rows = db.execute('SELECT * FROM portfolio_descriptions').fetchall()
+    return {r['filename']: dict(r) for r in rows}
+
+
+def save_portfolio_description(filename, title, description, category='residential'):
+    """Insert or update a portfolio description."""
+    db = get_db()
+    db.execute(
+        'INSERT INTO portfolio_descriptions (filename, title, description, category) '
+        'VALUES (?, ?, ?, ?) '
+        'ON CONFLICT(filename) DO UPDATE SET title=?, description=?, category=?',
+        (filename, title, description, category, title, description, category))
+    db.commit()
 
 
 def scan_portfolio_images():
@@ -243,9 +360,7 @@ def portfolio():
 
 @app.route('/reviews')
 def reviews():
-    all_reviews = load_reviews()
-    # Sort newest first
-    all_reviews.sort(key=lambda r: r.get('timestamp', ''), reverse=True)
+    all_reviews = load_reviews()  # already sorted newest-first by the DB query
     return render_template('reviews.html', reviews=all_reviews)
 
 
@@ -275,18 +390,7 @@ def submit_review():
             flash(err, 'danger')
         return redirect(url_for('reviews'))
 
-    review = {
-        'name': name,
-        'email': email,
-        'rating': int(rating),
-        'title': title,
-        'review': review_text,
-        'timestamp': datetime.now().isoformat(),
-    }
-
-    reviews = load_reviews()
-    reviews.append(review)
-    save_reviews(reviews)
+    save_review(name, email, int(rating), title, review_text)
 
     flash('Thank you for your review! It has been submitted successfully.', 'success')
     return redirect(url_for('reviews'))
@@ -321,9 +425,13 @@ def submit_contact():
 
 
 # ---------------------------------------------------------------------------
+# Initialise database on import (works with gunicorn & flask run)
+# ---------------------------------------------------------------------------
+init_db()
+
 if __name__ == '__main__':
     # Ensure required directories exist
-    for d in [DATA_DIR, PORTFOLIO_IMG_DIR,
+    for d in [PORTFOLIO_IMG_DIR,
               os.path.join(os.path.dirname(__file__), 'static', 'images', 'tanks')]:
         os.makedirs(d, exist_ok=True)
 

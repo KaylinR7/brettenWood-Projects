@@ -33,6 +33,5 @@ instance/
 # Node (if added later)
 node_modules/
 
-# Data (keep structure, ignore sensitive submissions)
-# Uncomment below to ignore user-submitted reviews:
-# data/reviews.json
+# Database
+*.db

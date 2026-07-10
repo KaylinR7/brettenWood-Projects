@@ -127,32 +127,27 @@ img { max-width: 100%; height: auto; display: block; }
   box-shadow: var(--bw-shadow-lg);
 }
 
-.bw-logo-box {
-  width: 40px;
-  height: 40px;
-  background: var(--bw-black);
-  color: var(--bw-white);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
+/* Logo image (replaces old icon box) */
+.bw-logo-img {
+  height: 50px;
+  width: 50px;
+  object-fit: cover;
+  border-radius: 8px;
   flex-shrink: 0;
+  display: block;
+  transition: opacity var(--bw-transition), transform var(--bw-transition);
 }
-.bw-logo-box--light {
-  background: var(--bw-white);
-  color: var(--bw-black);
-  border: 1px solid rgba(255,255,255,0.2);
+.bw-logo-img--footer {
+  height: 56px;
+  width: 56px;
+  border-radius: 8px;
+  opacity: 0.9;
+}
+.navbar-brand.bw-brand:hover .bw-logo-img {
+  opacity: 0.8;
+  transform: scale(1.04);
 }
 
-.bw-brand-text {
-  font-family: var(--bw-font-head);
-  font-weight: 900;
-  font-size: 0.85rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  line-height: 1.2;
-  color: var(--bw-black);
-}
 
 .navbar-brand.bw-brand:hover { opacity: 0.85; }
 
