@@ -64,6 +64,38 @@ def init_db():
         )
     ''')
 
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS projects (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            title       TEXT NOT NULL,
+            description TEXT,
+            category    TEXT DEFAULT 'residential',
+            created_at  TEXT NOT NULL
+        )
+    ''')
+
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS project_images (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id  INTEGER NOT NULL,
+            filename    TEXT NOT NULL,
+            is_primary  BOOLEAN DEFAULT 0,
+            FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+        )
+    ''')
+
+    # Migration from old portfolio_descriptions table to projects
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='portfolio_descriptions'")
+    if cur.fetchone():
+        old_rows = cur.execute("SELECT filename, title, description, category FROM portfolio_descriptions").fetchall()
+        for row in old_rows:
+            cur.execute("SELECT id FROM project_images WHERE filename=?", (row['filename'],))
+            if not cur.fetchone():
+                cur.execute("INSERT INTO projects (title, description, category, created_at) VALUES (?, ?, ?, ?)",
+                            (row['title'] or 'Untitled', row['description'] or '', row['category'], datetime.now().isoformat()))
+                project_id = cur.lastrowid
+                cur.execute("INSERT INTO project_images (project_id, filename, is_primary) VALUES (?, ?, 1)", (project_id, row['filename']))
+
     conn.commit()
     conn.close()
 
@@ -91,186 +123,144 @@ def save_review(name, email, rating, title, review_text):
     return cur.lastrowid
 
 
-def load_portfolio_descriptions():
-    """Return portfolio descriptions as {filename: {title, description, category}}."""
+def load_projects():
+    """Return all projects with their associated images."""
     db = get_db()
-    rows = db.execute('SELECT * FROM portfolio_descriptions').fetchall()
-    return {r['filename']: dict(r) for r in rows}
+    rows = db.execute('''
+        SELECT p.id, p.title, p.description, p.category, p.created_at,
+               GROUP_CONCAT(i.filename) as filenames
+        FROM projects p
+        LEFT JOIN project_images i ON p.id = i.project_id
+        GROUP BY p.id
+        ORDER BY p.id DESC
+    ''').fetchall()
+
+    projects = []
+    for r in rows:
+        filenames = r['filenames'].split(',') if r['filenames'] else []
+        primary_image = filenames[0] if filenames else None
+        
+        projects.append({
+            'id': r['id'],
+            'title': r['title'],
+            'description': r['description'],
+            'category': r['category'],
+            'created_at': r['created_at'],
+            'images': [{'url': f'images/portfolio/{fn}', 'filename': fn} for fn in filenames],
+            'primary_image': {'url': f'images/portfolio/{primary_image}', 'filename': primary_image} if primary_image else None
+        })
+    return projects
 
 
-def save_portfolio_description(filename, title, description, category='residential'):
-    """Insert or update a portfolio description."""
+def save_project(title, description, category, filenames):
+    """Save a new project with multiple images."""
     db = get_db()
-    db.execute(
-        'INSERT INTO portfolio_descriptions (filename, title, description, category) '
-        'VALUES (?, ?, ?, ?) '
-        'ON CONFLICT(filename) DO UPDATE SET title=?, description=?, category=?',
-        (filename, title, description, category, title, description, category))
+    cur = db.cursor()
+    cur.execute(
+        'INSERT INTO projects (title, description, category, created_at) VALUES (?, ?, ?, ?)',
+        (title, description, category, datetime.now().isoformat())
+    )
+    project_id = cur.lastrowid
+    
+    for idx, fn in enumerate(filenames):
+        is_primary = 1 if idx == 0 else 0
+        cur.execute('INSERT INTO project_images (project_id, filename, is_primary) VALUES (?, ?, ?)', 
+                    (project_id, fn, is_primary))
+        
     db.commit()
 
 
-def scan_portfolio_images():
-    """Scan portfolio directory for images and return structured data."""
-    descriptions = load_portfolio_descriptions()
-    images = []
-    if not os.path.exists(PORTFOLIO_IMG_DIR):
-        os.makedirs(PORTFOLIO_IMG_DIR, exist_ok=True)
-        return images
-
-    extensions = ['*.jpg', '*.jpeg', '*.png', '*.webp', '*.gif']
-    found_files = []
-    for ext in extensions:
-        found_files.extend(glob.glob(os.path.join(PORTFOLIO_IMG_DIR, ext)))
-        found_files.extend(glob.glob(os.path.join(PORTFOLIO_IMG_DIR, ext.upper())))
-
-    seen = set()
-    for filepath in found_files:
-        filename = os.path.basename(filepath)
-        if filename in seen:
-            continue
-        seen.add(filename)
-
-        # Generate a human-readable title from filename
-        stem = os.path.splitext(filename)[0]
-        title = stem.replace('_', ' ').replace('-', ' ').title()
-
-        desc_data = descriptions.get(filename, {})
-        images.append({
-            'filename': filename,
-            'url': f'images/portfolio/{filename}',
-            'title': desc_data.get('title', title),
-            'description': desc_data.get('description', ''),
-            'category': desc_data.get('category', 'residential'),
-        })
-
-    return images
-
-
 # ---------------------------------------------------------------------------
-# Tank Systems Data (static — no DB needed)
+# Tank Systems Data — grouped by size, each with JoJo + Eco variants
 # ---------------------------------------------------------------------------
-TANK_SYSTEMS = {
-    'jojo_1000': {
-        'id': 'jojo_1000',
-        'brand': 'JoJo',
+TANK_SYSTEMS = [
+    {
+        'id': '1000L',
         'capacity': '1000L',
-        'image': 'images/tanks/jojo_1000.jpg',
         'pump': 'Grundfos CM3-5 Pressure Pump',
         'pump_specs': '0.55 kW | 45 L/min | Max 5 bar',
-        'components': [
-            '1000L JoJo Slimline Vertical Tank',
-            'Grundfos CM3-5 Pressure Pump',
-            'Pressure Switch (adjustable cut-in/cut-out)',
-            'Non-Return / Check Valve (32mm)',
-            'Heavy-Duty Galvanised Steel Tank Stand',
-            'Full Installation Kit (pipework, fittings, float valve)',
-            '1-Year Labour Warranty',
-        ],
         'ideal_for': 'Small households, apartments, townhouses',
-        'color': '#f8f9fa',
-    },
-    'jojo_2500': {
-        'id': 'jojo_2500',
-        'brand': 'JoJo',
-        'capacity': '2500L',
-        'image': 'images/tanks/jojo_2500.jpg',
-        'pump': 'Grundfos CM5-7 Pressure Pump',
-        'pump_specs': '0.75 kW | 65 L/min | Max 7 bar',
-        'components': [
-            '2500L JoJo Vertical Storage Tank',
-            'Grundfos CM5-7 Pressure Pump',
-            'Pressure Switch (adjustable cut-in/cut-out)',
-            'Non-Return / Check Valve (40mm)',
-            'Heavy-Duty Galvanised Steel Tank Stand',
-            'Full Installation Kit (pipework, fittings, float valve)',
-            '1-Year Labour Warranty',
-        ],
-        'ideal_for': 'Medium-sized family homes',
-        'color': '#f8f9fa',
-    },
-    'jojo_5000': {
-        'id': 'jojo_5000',
-        'brand': 'JoJo',
-        'capacity': '5000L',
-        'image': 'images/tanks/jojo_5000.jpg',
-        'pump': 'Grundfos CM10-2 Pressure Pump',
-        'pump_specs': '1.1 kW | 120 L/min | Max 8 bar',
-        'components': [
-            '5000L JoJo Vertical Storage Tank',
-            'Grundfos CM10-2 Pressure Pump',
-            'Pressure Switch (adjustable cut-in/cut-out)',
-            'Non-Return / Check Valve (50mm)',
-            'Heavy-Duty Galvanised Steel Tank Stand',
-            'Full Installation Kit (pipework, fittings, float valve)',
-            'Level Indicator / Gauge',
-            '1-Year Labour Warranty',
-        ],
-        'ideal_for': 'Large family homes, small commercial',
-        'color': '#f8f9fa',
-    },
-    'eco_1000': {
-        'id': 'eco_1000',
-        'brand': 'Eco',
-        'capacity': '1000L',
-        'image': 'images/tanks/eco_1000.jpg',
-        'pump': 'Grundfos CM3-5 Pressure Pump',
-        'pump_specs': '0.55 kW | 45 L/min | Max 5 bar',
-        'components': [
-            '1000L Eco Slim Vertical Tank (UV Stabilised)',
+        'brands': {
+            'jojo': {
+                'label': 'JoJo',
+                'image': 'images/tanks/jojo_1000.png',
+                'tank_name': '1000L JoJo Slimline Vertical Tank',
+                'stand': 'Heavy-Duty Galvanised Steel Tank Stand',
+            },
+            'eco': {
+                'label': 'Eco',
+                'image': 'images/tanks/eco_1000.jpg',
+                'tank_name': '1000L Eco Slim Vertical Tank (UV Stabilised)',
+                'stand': 'Powder-Coated Steel Tank Stand',
+            },
+        },
+        'shared_components': [
             'Grundfos CM3-5 Pressure Pump',
             'Pressure Switch (adjustable cut-in/cut-out)',
             'Non-Return / Check Valve (32mm)',
-            'Powder-Coated Steel Tank Stand',
             'Full Installation Kit (pipework, fittings, float valve)',
             '1-Year Labour Warranty',
         ],
-        'ideal_for': 'Compact spaces, smaller properties',
-        'color': '#000000',
     },
-    'eco_2500': {
-        'id': 'eco_2500',
-        'brand': 'Eco',
+    {
+        'id': '2500L',
         'capacity': '2500L',
-        'image': 'images/tanks/eco_2500.jpg',
         'pump': 'Grundfos CM5-7 Pressure Pump',
         'pump_specs': '0.75 kW | 65 L/min | Max 7 bar',
-        'components': [
-            '2500L Eco Vertical Storage Tank (UV Stabilised)',
+        'ideal_for': 'Medium to large family homes',
+        'brands': {
+            'jojo': {
+                'label': 'JoJo',
+                'image': 'images/tanks/jojo_2500.webp',
+                'tank_name': '2500L JoJo Vertical Storage Tank',
+                'stand': 'Heavy-Duty Galvanised Steel Tank Stand',
+            },
+            'eco': {
+                'label': 'Eco',
+                'image': 'images/tanks/eco_2500.webp',
+                'tank_name': '2500L Eco Vertical Storage Tank (UV Stabilised)',
+                'stand': 'Powder-Coated Steel Tank Stand',
+            },
+        },
+        'shared_components': [
             'Grundfos CM5-7 Pressure Pump',
             'Pressure Switch (adjustable cut-in/cut-out)',
             'Non-Return / Check Valve (40mm)',
-            'Powder-Coated Steel Tank Stand',
             'Full Installation Kit (pipework, fittings, float valve)',
             '1-Year Labour Warranty',
         ],
-        'ideal_for': 'Standard family homes',
-        'color': '#000000',
     },
-    'eco_5000': {
-        'id': 'eco_5000',
-        'brand': 'Eco',
+    {
+        'id': '5000L',
         'capacity': '5000L',
-        'image': 'images/tanks/eco_5000.jpg',
         'pump': 'Grundfos CM10-2 Pressure Pump',
         'pump_specs': '1.1 kW | 120 L/min | Max 8 bar',
-        'components': [
-            '5000L Eco Vertical Storage Tank (UV Stabilised)',
+        'ideal_for': 'Large family homes, small commercial',
+        'brands': {
+            'jojo': {
+                'label': 'JoJo',
+                'image': 'images/tanks/jojo_5000.jpg',
+                'tank_name': '5000L JoJo Vertical Storage Tank',
+                'stand': 'Heavy-Duty Galvanised Steel Tank Stand',
+            },
+            'eco': {
+                'label': 'Eco',
+                'image': 'images/tanks/eco_5000.jpg',
+                'tank_name': '5000L Eco Vertical Storage Tank (UV Stabilised)',
+                'stand': 'Powder-Coated Steel Tank Stand',
+            },
+        },
+        'shared_components': [
             'Grundfos CM10-2 Pressure Pump',
             'Pressure Switch (adjustable cut-in/cut-out)',
             'Non-Return / Check Valve (50mm)',
-            'Powder-Coated Steel Tank Stand',
             'Full Installation Kit (pipework, fittings, float valve)',
             'Level Indicator / Gauge',
             '1-Year Labour Warranty',
         ],
-        'ideal_for': 'Large homes, small commercial properties',
-        'color': '#000000',
     },
-}
+]
 
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
 
 @app.route('/')
 def home():
@@ -279,31 +269,27 @@ def home():
 
 @app.route('/systems')
 def systems():
-    brand_filter = request.args.get('brand', 'all').lower()
     size_filter = request.args.get('size', 'all')
 
-    filtered = list(TANK_SYSTEMS.values())
-    if brand_filter != 'all':
-        filtered = [s for s in filtered if s['brand'].lower() == brand_filter]
+    filtered = TANK_SYSTEMS
     if size_filter != 'all':
         filtered = [s for s in filtered if s['capacity'] == size_filter]
 
     return render_template('systems.html',
                            systems=filtered,
-                           brand_filter=brand_filter,
                            size_filter=size_filter)
 
 
 @app.route('/portfolio')
 def portfolio():
-    images = scan_portfolio_images()
+    projects = load_projects()
     category_filter = request.args.get('category', 'all')
 
     if category_filter != 'all':
-        images = [img for img in images if img.get('category') == category_filter]
+        projects = [p for p in projects if p.get('category') == category_filter]
 
     return render_template('portfolio.html',
-                           images=images,
+                           projects=projects,
                            category_filter=category_filter)
 
 
@@ -338,7 +324,7 @@ def admin_portal():
     # If logged in, show existing portfolio items
     portfolio_items = []
     if is_authenticated:
-        portfolio_items = scan_portfolio_images()
+        portfolio_items = load_projects()
 
     return render_template('admin.html', is_authenticated=is_authenticated, portfolio=portfolio_items)
 
@@ -353,23 +339,27 @@ def submit_project():
     title = request.form.get('title', '').strip()
     description = request.form.get('description', '').strip()
     category = request.form.get('category', 'residential').strip()
-    file = request.files.get('file')
+    files = request.files.getlist('files')
 
-    if not title or not file:
-        flash('Project title and image file are required.', 'danger')
+    if not title or not files or all(f.filename == '' for f in files):
+        flash('Project title and at least one image file are required.', 'danger')
         return redirect(url_for('admin_portal'))
 
     try:
-        # Save image to local portfolio directory
-        ext = os.path.splitext(file.filename)[1]
-        secure_name = f"portfolio_{datetime.now().strftime('%Y%m%d%H%M%S')}{ext}"
         os.makedirs(PORTFOLIO_IMG_DIR, exist_ok=True)
-        file.save(os.path.join(PORTFOLIO_IMG_DIR, secure_name))
+        saved_filenames = []
+        for i, file in enumerate(files):
+            if file and file.filename:
+                ext = os.path.splitext(file.filename)[1]
+                secure_name = f"portfolio_{datetime.now().strftime('%Y%m%d%H%M%S')}_{i}{ext}"
+                file.save(os.path.join(PORTFOLIO_IMG_DIR, secure_name))
+                saved_filenames.append(secure_name)
 
-        # Save metadata to SQLite
-        save_portfolio_description(secure_name, title, description, category)
-
-        flash('New portfolio project successfully uploaded!', 'success')
+        if saved_filenames:
+            save_project(title, description, category, saved_filenames)
+            flash('New portfolio project successfully uploaded!', 'success')
+        else:
+            flash('No valid images were uploaded.', 'danger')
     except Exception as e:
         app.logger.error(f'Failed to upload project: {e}')
         flash(f'Error uploading project: {e}', 'danger')
@@ -377,22 +367,25 @@ def submit_project():
     return redirect(url_for('admin_portal'))
 
 
-@app.route('/delete_project/<filename>', methods=['POST'])
-def delete_project(filename):
+@app.route('/delete_project/<int:project_id>', methods=['POST'])
+def delete_project(project_id):
     from flask import session
     if not session.get('is_admin', False):
         flash('Unauthorized.', 'danger')
         return redirect(url_for('admin_portal'))
 
     try:
-        # Delete image file from disk
-        filepath = os.path.join(PORTFOLIO_IMG_DIR, filename)
-        if os.path.exists(filepath):
-            os.remove(filepath)
-
-        # Delete metadata from SQLite
         db = get_db()
-        db.execute('DELETE FROM portfolio_descriptions WHERE filename = ?', (filename,))
+        # Delete image files from disk
+        rows = db.execute('SELECT filename FROM project_images WHERE project_id = ?', (project_id,)).fetchall()
+        for row in rows:
+            filepath = os.path.join(PORTFOLIO_IMG_DIR, row['filename'])
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                
+        # Delete metadata from SQLite
+        db.execute('DELETE FROM project_images WHERE project_id = ?', (project_id,))
+        db.execute('DELETE FROM projects WHERE id = ?', (project_id,))
         db.commit()
 
         flash('Project deleted.', 'success')

@@ -12,6 +12,7 @@
         <h1 class="bw-page-title">Tank Systems</h1>
         <p class="bw-page-subtitle">
           Complete water backup packages—tank, Grundfos pump, fittings, and installation included.
+          Available in <strong>JoJo</strong> or <strong>Eco</strong> tanks.
         </p>
       </div>
     </div>
@@ -24,32 +25,17 @@
     <form method="GET" action="{{ url_for('systems') }}" class="d-flex flex-wrap gap-3 align-items-center py-3">
       <span class="fw-semibold text-uppercase tracking-wide small me-2">Filter:</span>
 
-      <!-- Brand filter -->
-      <div class="bw-filter-group">
-        <span class="bw-filter-label">Brand</span>
-        <div class="btn-group" role="group">
-          <a href="?brand=all&size={{ size_filter }}"
-             class="btn bw-filter-btn {% if brand_filter == 'all' %}active{% endif %}">All</a>
-          <a href="?brand=jojo&size={{ size_filter }}"
-             class="btn bw-filter-btn {% if brand_filter == 'jojo' %}active{% endif %}">JoJo</a>
-          <a href="?brand=eco&size={{ size_filter }}"
-             class="btn bw-filter-btn {% if brand_filter == 'eco' %}active{% endif %}">Eco</a>
-        </div>
-      </div>
-
-      <div class="bw-filter-divider d-none d-md-block"></div>
-
       <!-- Size filter -->
       <div class="bw-filter-group">
         <span class="bw-filter-label">Capacity</span>
         <div class="btn-group" role="group">
-          <a href="?brand={{ brand_filter }}&size=all"
+          <a href="?size=all"
              class="btn bw-filter-btn {% if size_filter == 'all' %}active{% endif %}">All</a>
-          <a href="?brand={{ brand_filter }}&size=1000L"
+          <a href="?size=1000L"
              class="btn bw-filter-btn {% if size_filter == '1000L' %}active{% endif %}">1000 L</a>
-          <a href="?brand={{ brand_filter }}&size=2500L"
+          <a href="?size=2500L"
              class="btn bw-filter-btn {% if size_filter == '2500L' %}active{% endif %}">2500 L</a>
-          <a href="?brand={{ brand_filter }}&size=5000L"
+          <a href="?size=5000L"
              class="btn bw-filter-btn {% if size_filter == '5000L' %}active{% endif %}">5000 L</a>
         </div>
       </div>
@@ -61,21 +47,49 @@
 <section class="bw-section">
   <div class="container-xl">
     {% if systems %}
-    <div class="row g-4">
+    <div class="row g-4 justify-content-center">
       {% for system in systems %}
       <div class="col-md-6 col-xl-4" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 80 }}">
         <div class="bw-system-card">
-          <!-- Brand badge -->
-          <div class="bw-system-brand-badge bw-system-brand-badge--{{ system.brand | lower }}">
-            {{ system.brand }}
-          </div>
 
-          <!-- Tank image -->
-          <div class="bw-system-img-wrap">
-            <img src="{{ url_for('static', filename=system.image) }}"
+          <!-- Image area with brand switcher -->
+          <div class="bw-system-img-wrap position-relative" id="img-wrap-{{ system.id }}">
+
+            <!-- JoJo image (default visible) -->
+            <img src="{{ url_for('static', filename=system.brands.jojo.image) }}"
                  onerror="this.src='https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500&q=80'"
-                 alt="{{ system.brand }} {{ system.capacity }} Water Tank"
-                 class="bw-system-img">
+                 alt="JoJo {{ system.capacity }} Water Tank"
+                 class="bw-system-img bw-brand-img bw-brand-img--active"
+                 id="img-jojo-{{ system.id }}">
+
+            <!-- Eco image (hidden by default) -->
+            <img src="{{ url_for('static', filename=system.brands.eco.image) }}"
+                 onerror="this.src='https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500&q=80'"
+                 alt="Eco {{ system.capacity }} Water Tank"
+                 class="bw-system-img bw-brand-img"
+                 id="img-eco-{{ system.id }}">
+
+            <!-- Brand toggle arrows -->
+            <button class="bw-brand-arrow bw-brand-arrow--prev"
+                    onclick="switchBrand('{{ system.id }}', -1)" aria-label="Previous brand">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <button class="bw-brand-arrow bw-brand-arrow--next"
+                    onclick="switchBrand('{{ system.id }}', 1)" aria-label="Next brand">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+
+            <!-- Brand label pill -->
+            <div class="bw-brand-label-pill" id="brand-label-{{ system.id }}">
+              <span class="bw-brand-dot bw-brand-dot--jojo"></span>
+              <span id="brand-text-{{ system.id }}">JoJo</span>
+            </div>
+
+            <!-- Brand dots indicator -->
+            <div class="bw-brand-dots">
+              <span class="bw-dot bw-dot--active" id="dot-jojo-{{ system.id }}"></span>
+              <span class="bw-dot" id="dot-eco-{{ system.id }}"></span>
+            </div>
           </div>
 
           <!-- Card body -->
@@ -94,7 +108,19 @@
               <i class="fa-solid fa-house me-1"></i>Ideal for: <em>{{ system.ideal_for }}</em>
             </p>
 
-            <!-- Included components -->
+            <!-- Brand-specific tank details -->
+            <div class="bw-brand-detail mb-3" id="detail-jojo-{{ system.id }}">
+              <span class="bw-brand-detail-label">JoJo Tank</span>
+              <p class="small text-muted mb-1">{{ system.brands.jojo.tank_name }}</p>
+              <p class="small text-muted mb-0"><i class="fa-solid fa-layer-group me-1"></i>{{ system.brands.jojo.stand }}</p>
+            </div>
+            <div class="bw-brand-detail mb-3 d-none" id="detail-eco-{{ system.id }}">
+              <span class="bw-brand-detail-label">Eco Tank</span>
+              <p class="small text-muted mb-1">{{ system.brands.eco.tank_name }}</p>
+              <p class="small text-muted mb-0"><i class="fa-solid fa-layer-group me-1"></i>{{ system.brands.eco.stand }}</p>
+            </div>
+
+            <!-- Shared components -->
             <div class="bw-components-toggle" id="toggle-{{ system.id }}">
               <button class="bw-components-btn" type="button"
                       data-bs-toggle="collapse"
@@ -106,9 +132,28 @@
               </button>
               <div class="collapse" id="components-{{ system.id }}">
                 <ul class="bw-components-list">
-                  {% for item in system.components %}
+                  <!-- Brand-specific tank -->
+                  <li id="comp-tank-jojo-{{ system.id }}">
+                    <i class="fa-solid fa-check bw-check-icon me-2"></i>
+                    {{ system.brands.jojo.tank_name }}
+                  </li>
+                  <li id="comp-tank-eco-{{ system.id }}" class="d-none">
+                    <i class="fa-solid fa-check bw-check-icon me-2"></i>
+                    {{ system.brands.eco.tank_name }}
+                  </li>
+                  <!-- Shared items -->
+                  {% for item in system.shared_components %}
                   <li><i class="fa-solid fa-check bw-check-icon me-2"></i>{{ item }}</li>
                   {% endfor %}
+                  <!-- Brand-specific stand -->
+                  <li id="comp-stand-jojo-{{ system.id }}">
+                    <i class="fa-solid fa-check bw-check-icon me-2"></i>
+                    {{ system.brands.jojo.stand }}
+                  </li>
+                  <li id="comp-stand-eco-{{ system.id }}" class="d-none">
+                    <i class="fa-solid fa-check bw-check-icon me-2"></i>
+                    {{ system.brands.eco.stand }}
+                  </li>
                 </ul>
               </div>
             </div>
@@ -166,4 +211,51 @@
   </div>
 </section>
 
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// State: track which brand index is active per system
+const brandOrder = ['jojo', 'eco'];
+const brandState = {};
+
+document.querySelectorAll('[id^="img-wrap-"]').forEach(wrap => {
+  const sysId = wrap.id.replace('img-wrap-', '');
+  brandState[sysId] = 0; // 0 = jojo, 1 = eco
+});
+
+function switchBrand(sysId, direction) {
+  const current = brandState[sysId];
+  const next = (current + direction + brandOrder.length) % brandOrder.length;
+  const currentBrand = brandOrder[current];
+  const nextBrand = brandOrder[next];
+
+  // Swap images
+  const currentImg = document.getElementById(`img-${currentBrand}-${sysId}`);
+  const nextImg = document.getElementById(`img-${nextBrand}-${sysId}`);
+  currentImg.classList.remove('bw-brand-img--active');
+  nextImg.classList.add('bw-brand-img--active');
+
+  // Swap detail panels
+  document.getElementById(`detail-${currentBrand}-${sysId}`).classList.add('d-none');
+  document.getElementById(`detail-${nextBrand}-${sysId}`).classList.remove('d-none');
+
+  // Swap component tank + stand items
+  document.getElementById(`comp-tank-${currentBrand}-${sysId}`).classList.add('d-none');
+  document.getElementById(`comp-tank-${nextBrand}-${sysId}`).classList.remove('d-none');
+  document.getElementById(`comp-stand-${currentBrand}-${sysId}`).classList.add('d-none');
+  document.getElementById(`comp-stand-${nextBrand}-${sysId}`).classList.remove('d-none');
+
+  // Update label pill
+  document.getElementById(`brand-text-${sysId}`).textContent = nextBrand === 'jojo' ? 'JoJo' : 'Eco';
+  const dot = document.querySelector(`#brand-label-${sysId} .bw-brand-dot`);
+  dot.className = `bw-brand-dot bw-brand-dot--${nextBrand}`;
+
+  // Update indicator dots
+  document.getElementById(`dot-${currentBrand}-${sysId}`).classList.remove('bw-dot--active');
+  document.getElementById(`dot-${nextBrand}-${sysId}`).classList.add('bw-dot--active');
+
+  brandState[sysId] = next;
+}
+</script>
 {% endblock %}

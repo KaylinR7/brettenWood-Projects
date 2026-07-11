@@ -42,39 +42,40 @@
 <!-- Portfolio Gallery -->
 <section class="bw-section">
   <div class="container-xl">
-    {% if images %}
+    {% if projects %}
     <div class="row g-3" id="portfolio-grid">
-      {% for img in images %}
-      {% if category_filter == 'all' or img.category == category_filter %}
+      {% for p in projects %}
       <div class="col-sm-6 col-md-4 col-lg-3 portfolio-item"
-           data-category="{{ img.category }}"
+           data-category="{{ p.category }}"
            data-aos="zoom-in" data-aos-delay="{{ (loop.index0 % 8) * 60 }}">
         <div class="bw-portfolio-card"
              data-bs-toggle="modal"
              data-bs-target="#lightboxModal"
-             data-img="{{ url_for('static', filename=img.url) }}"
-             data-title="{{ img.title }}"
-             data-desc="{{ img.description }}"
-             data-cat="{{ img.category }}">
+             data-project-id="{{ p.id }}">
           <div class="bw-portfolio-img-wrap">
-            <img src="{{ url_for('static', filename=img.url) }}"
-                 alt="{{ img.title }}"
+            {% if p.primary_image %}
+            <img src="{{ url_for('static', filename=p.primary_image.url) }}"
+                 alt="{{ p.title }}"
                  class="bw-portfolio-img"
                  loading="lazy">
+            {% else %}
+            <div class="bw-portfolio-placeholder-img d-flex align-items-center justify-content-center bg-light h-100 w-100">
+              <i class="fa-solid fa-image fa-3x text-muted"></i>
+            </div>
+            {% endif %}
             <div class="bw-portfolio-overlay">
               <i class="fa-solid fa-magnifying-glass-plus bw-portfolio-zoom"></i>
-              <span class="bw-portfolio-cat-badge">{{ img.category }}</span>
+              <span class="bw-portfolio-cat-badge">{{ p.category }}</span>
             </div>
           </div>
           <div class="bw-portfolio-caption">
-            <h3 class="bw-portfolio-title">{{ img.title }}</h3>
-            {% if img.description %}
-            <p class="bw-portfolio-desc">{{ img.description }}</p>
+            <h3 class="bw-portfolio-title">{{ p.title }}</h3>
+            {% if p.description %}
+            <p class="bw-portfolio-desc">{{ p.description }}</p>
             {% endif %}
           </div>
         </div>
       </div>
-      {% endif %}
       {% endfor %}
     </div>
     {% else %}
@@ -137,8 +138,21 @@
     <div class="modal-content bw-lightbox-content">
       <button type="button" class="btn-close position-absolute top-0 end-0 m-4 z-3 shadow" data-bs-dismiss="modal" aria-label="Close" style="background-color: var(--bw-white); opacity: 1; padding: 0.8rem; border-radius: 50%;"></button>
       <div class="row g-0">
-        <div class="col-lg-8">
-          <img id="lightboxImg" src="" alt="" class="bw-lightbox-img">
+        <div class="col-lg-8 position-relative bg-dark d-flex align-items-stretch justify-content-center" style="min-height: 500px;">
+          <!-- Carousel -->
+          <div id="projectCarousel" class="carousel slide w-100 h-100" data-bs-ride="false">
+            <div class="carousel-inner h-100" id="carouselInner">
+              <!-- Images injected via JS -->
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#projectCarousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#projectCarousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Next</span>
+            </button>
+          </div>
         </div>
         <div class="col-lg-4 d-flex flex-column justify-content-center p-4">
           <span id="lightboxCat" class="bw-portfolio-cat-badge mb-3 d-inline-block"></span>
@@ -156,14 +170,50 @@
 
 {% block extra_scripts %}
 <script>
+window.portfolioProjects = {{ projects|tojson|safe }};
+
 // Lightbox population
 document.querySelectorAll('.bw-portfolio-card[data-bs-toggle="modal"]').forEach(card => {
   card.addEventListener('click', () => {
-    document.getElementById('lightboxImg').src = card.dataset.img;
-    document.getElementById('lightboxImg').alt = card.dataset.title;
-    document.getElementById('lightboxTitle').textContent = card.dataset.title;
-    document.getElementById('lightboxDesc').textContent = card.dataset.desc;
-    document.getElementById('lightboxCat').textContent = card.dataset.cat;
+    const projectId = parseInt(card.dataset.projectId);
+    const project = window.portfolioProjects.find(p => p.id === projectId);
+    
+    if (project) {
+      document.getElementById('lightboxTitle').textContent = project.title;
+      document.getElementById('lightboxDesc').textContent = project.description;
+      document.getElementById('lightboxCat').textContent = project.category;
+      
+      const carouselInner = document.getElementById('carouselInner');
+      carouselInner.innerHTML = ''; // clear existing
+      
+      if (project.images && project.images.length > 0) {
+        project.images.forEach((img, index) => {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'carousel-item h-100' + (index === 0 ? ' active' : '');
+          
+          const flexDiv = document.createElement('div');
+          flexDiv.className = 'd-flex align-items-center justify-content-center h-100 w-100';
+
+          const imageEl = document.createElement('img');
+          imageEl.src = '/static/' + img.url;
+          imageEl.alt = project.title;
+          imageEl.style.width = '100%';
+          imageEl.style.height = '100%';
+          imageEl.style.maxHeight = '85vh';
+          imageEl.style.objectFit = 'contain';
+          
+          flexDiv.appendChild(imageEl);
+          itemDiv.appendChild(flexDiv);
+          carouselInner.appendChild(itemDiv);
+        });
+        
+        // Show or hide controls based on image count
+        const controls = document.querySelectorAll('#projectCarousel .carousel-control-prev, #projectCarousel .carousel-control-next');
+        controls.forEach(ctrl => {
+          ctrl.style.display = project.images.length > 1 ? 'block' : 'none';
+        });
+      }
+    }
   });
 });
 </script>
