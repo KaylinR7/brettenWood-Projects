@@ -1173,6 +1173,9 @@ img {
     border: 2px solid var(--bw-gray-200);
     overflow: hidden;
     transition: border-color var(--bw-transition), transform var(--bw-transition), box-shadow var(--bw-transition);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
   }
 
   .bw-portfolio-card:hover {
@@ -1251,6 +1254,10 @@ img {
 
   .bw-portfolio-caption {
     padding: 1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
   }
 
   .bw-portfolio-title {
@@ -1259,6 +1266,11 @@ img {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     margin-bottom: 0.25rem;
+    /* Clamp title to 2 lines */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .bw-portfolio-desc {
@@ -1266,6 +1278,11 @@ img {
     color: var(--bw-gray-600);
     margin-bottom: 0;
     line-height: 1.4;
+    /* Clamp description to 3 lines */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   /* Placeholder message */
